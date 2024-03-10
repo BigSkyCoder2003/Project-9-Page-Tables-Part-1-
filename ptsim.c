@@ -46,14 +46,47 @@ unsigned char get_page_table(int proc_num)
 //
 // This includes the new process page table and page_count data pages.
 //
-void new_process(int proc_num, int page_count)
-{
-    (void)proc_num;   // remove after implementation
-    (void)page_count; // remove after implementation
+void new_process(int proc_num, int page_count){
+    // Allocate a page table page
+    int page_table = 0;
+    for (int i = 1; i < PAGE_COUNT; i++) {
+        if (mem[i] == 0) {
+            page_table = i;
+            mem[i] = 1;
+            break;
+        }
+    }
+    if(page_table == 0)
+    {
+      printf("OOM: proc %d: page table\n", proc_num);
+      exit(1);
+    }
+    
+    //allocate process page(s)
+    for (int i = 0; i < page_count; i++) {
+        int page = 0;
+        for (int j = 1; j < PAGE_COUNT; j++) {
+            if (mem[j] == 0) {
+                page = j;
+                mem[j] = 1;
+                break;
+            }
+        }
+        if(page == 0)
+        {
+          printf("OOM: proc %d: page %d\n", proc_num, i);
+          exit(1);
+        }
 
-    // TODO
+        //page table
+        mem[get_address(page_table, i)] = page;
+    }
+
+    //page table pointer
+    mem[get_address(0, PTP_OFFSET + proc_num)] = page_table;
+
 }
-
+  
 //
 // Print the free page map
 //
@@ -90,7 +123,7 @@ void print_page_table(int proc_num)
         int addr = get_address(page_table, i);
 
         int page = mem[addr];
-
+        
         if (page != 0) {
             printf("%02x -> %02x\n", i, page);
         }
@@ -119,6 +152,12 @@ int main(int argc, char *argv[])
             int proc_num = atoi(argv[++i]);
             print_page_table(proc_num);
         }
+        else if (strcmp(argv[i], "np") == 0) {
+            int proc_num = atoi(argv[++i]);
+            int page_count = atoi(argv[++i]);
+            new_process(proc_num, page_count);
+        }
+
 
         // TODO: more command line arguments
     }
